@@ -5,6 +5,7 @@
     "mocha": "^10.2.0"
   },
   "scripts": {
-    "test": "mocha example_1.spec.js -r @babel/register"
+    "test": "mocha example_1.spec.js -r @babel/register",
+    "test refactor": "mocha example_1.spec.js -r @babel/register"
   }
 }
