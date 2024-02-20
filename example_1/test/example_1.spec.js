@@ -2,22 +2,7 @@
 // import assert from "asert";
 import { strictEqual } from 'assert';
 // import {readJsonFile, statement} from "./example_1.js"
-import {readJsonFile, statement} from "./example_1.js";
-
-
-// const example_1_test = 
-// statement
-// const n = 10;
-
-// describe("example 1 Test", () => {
-//     let result = 10;
-//     const msg = result === 10 ? "통과" : "실패";
-//     it(msg, () => {
-//         strictEqual(10, n);
-//     });
-    
-// });
-
+import {readJsonFile, statement} from "../example_1_refactoring.js";
 
 
 describe("example 1 Test", () => {
@@ -35,5 +20,4 @@ describe("example 1 Test", () => {
     it(msg, () => {
         strictEqual(result, expected);
     });
-
 });

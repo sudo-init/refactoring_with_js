@@ -1,7 +1,10 @@
 /*
     1. 함수 쪼개기
-    2. 임시 변수를 질의 함수로 바꾸기
-    3. 변수 인라인하기
+    2. 임시 변수를 질의 함수로 바꾸기 & 변수 인라인하기
+        - 중간에 계산된 필요한 값을 저장하는 임시 변수를 사용하는 대신 
+          해당 내용을 함수로 추출하여 함수를 호출하고, 값을 리턴받는 방식으로 변환.
+          추출된 함수를 변수 자리에 대체해줌 (변수 인라인하기)
+        
 
     for 안에 있는 코드 리팩토링하기
         1. 반복문 쪼개기 (변수 값을 누적시키는 부분을 분리. for을 두 번 써서 분리되도록)
@@ -19,64 +22,41 @@
     리팩터링으로 인한 성능의 문제에 대한 태도
     => 특별한 경우가 아니라면 일단 무시한다.
 */
+
+// Test 명령어 : npm run test_refactor
     
 
 import { readFile, readFileSync } from 'fs';
 
 
 export function statement(invoice, plays) {
-    let result = `청구내역 (고객명: ${invoice.customer})\n`;
-    for (let perf of invoice.performances) {
-        result += ` ${playFor(perf).name}: ${formatAsUSD(amountFor(perf))} (${perf.audience}석)\n`
-    }
-    result += `총액: ${formatAsUSD(totalAmount())}\n`;
-    result += `적립 포인트: ${totalVolumeCredits()}점`;
-    return result;
+    return renderPlainText(createStatementData(invoice, plays));
+}
 
+function createStatementData(invoice, plays) {
+    const statementData = {};
+    statementData.customer = invoice.customer;
+    statementData.performances = invoice.performances.map(enrichPerformances);
+    statementData.totalAmount = totalAmount(statementData);
+    statementData.totalVolumeCredits = totalVolumeCredits(statementData);
+    return statementData;
 
-    function formatAsUSD(aNumber) {
-        return new Intl.NumberFormat("en-US",
-        {
-            style: "currency", 
-            currency: "USD",
-            minimumFractionDigits: 2
-        }).format(aNumber / 100);
+    function enrichPerformances(aPerformance) {
+        const result = Object.assign({}, aPerformance);
+        result.play = playFor(result);
+        result.amount = amountFor(result);
+        result.volumeCredits = volumeCreditsFor(result);
+        return result;
     }
 
     function playFor(aPerformance) {
         return plays[aPerformance.playID];
     }
 
-    function totalAmount() {
-        let result = 0;
-        for (let perf of invoice.performances) {
-            result += amountFor(perf);
-        }
-        return result;
-    }
-
-    function totalVolumeCredits() {
-        let result = 0;
-        for (let perf of invoice.performances) {
-            result += volumeCreditsFor(perf);
-        }
-        return result
-    }
-
-    function volumeCreditsFor(aPerformance) {
-        let result = 0;
-        result += Math.max(aPerformance.audience - 30, 0);
-        if ("comedy" === playFor(aPerformance).type) {
-            result += Math.floor(aPerformance.audience / 5);
-        }
-        return result;
-    }
-
-    
     function amountFor(aPerformance) {
         let result = 0;
             
-        switch (playFor(aPerformance).type) {
+        switch (aPerformance.play.type) {
             case "tragedy" : 
             result = 40000;
                 if (aPerformance.audience > 30) {
@@ -91,13 +71,51 @@ export function statement(invoice, plays) {
                 result += 300 * aPerformance.audience;
                 break;
             default:
-                throw new Error(`알 수 없는 장르: ${playFor(aPerformance).type}`)
+                throw new Error(`알 수 없는 장르: ${aPerformance.play.type}`)
         }
         return result;
+    }
+
+    function volumeCreditsFor(aPerformance) {
+        let result = 0;
+        result += Math.max(aPerformance.audience - 30, 0);
+        if ("comedy" === aPerformance.play.type) {
+            result += Math.floor(aPerformance.audience / 5);
+        }
+        return result;
+    }
+
+    function totalAmount(data) {
+        return data.performances
+            .reduce((total, p) => total + p.amount, 0);
+    }
+
+    function totalVolumeCredits(data) {
+        return data.performances
+            .reduce((total, p) => total + p.volumeCredits, 0);
     }
 }
 
 
+
+function renderPlainText(data) {
+    let result = `청구내역 (고객명: ${data.customer})\n`;
+    for (let perf of data.performances) {
+        result += ` ${perf.play.name}: ${usd(perf.amount)} (${perf.audience}석)\n`
+    }
+    result += `총액: ${usd(data.totalAmount)}\n`;
+    result += `적립 포인트: ${data.totalVolumeCredits}점`;
+    return result;
+
+    function usd(aNumber) {
+        return new Intl.NumberFormat("en-US",
+        {
+            style: "currency", 
+            currency: "USD",
+            minimumFractionDigits: 2
+        }).format(aNumber / 100);
+    }
+}
 
 
 export function readJsonFile(filePath) {
